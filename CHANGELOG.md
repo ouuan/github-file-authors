@@ -1,5 +1,7 @@
 ## Unreleased
 
+## v1.0.0
+
 -   cacheFor is removed.
 -   getAuthors receives paths as parameter, and returns a 2-d array.
 -   Add apiConcurrency and gitConcurrency parameters.
