@@ -59,7 +59,7 @@ function defaultOnError(sha, email, error) {
 }
 
 function getErrorCallback(onerror) {
-  if (onerror === 'undefined') return defaultOnError;
+  if (onerror === undefined) return defaultOnError;
   if (typeof onerror === 'function') return onerror;
   return () => {};
 }

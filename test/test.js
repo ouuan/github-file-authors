@@ -83,4 +83,18 @@ describe('getAuthor', () => {
     const authors = await getAuthors({ repo, filePath: path.relative(process.cwd(), p('test', 'test1')), token });
     assert.deepEqual(authors, ['ouuan', 'sshwy']);
   });
+  it('On error', async () => {
+    let called = false;
+    await cacheFor({
+      repo,
+      paths: [p()],
+      onerror: (sha, email, error) => {
+        called = true;
+        assert.equal(sha, '8ab92719f812b4761fc9758cbe520fe9824da1cf');
+        assert.equal(email, 'this-user@doesnt-exist.com');
+        assert.equal(error.toString(), '.author.login not found in the API response');
+      },
+    });
+    assert(called);
+  });
 });
