@@ -64,25 +64,38 @@ function getErrorCallback(onerror) {
   return () => {};
 }
 
-function createSetApiPromiseQueue(configs) {
-  const { repo, token = process.env.GITHUB_TOKEN, onerror } = configs;
+function createQueue(configs) {
+  const {
+    repo,
+    token = process.env.GITHUB_TOKEN,
+    concurrency = 64,
+    onerror,
+  } = configs;
   checkRepo(repo);
   const errorCallback = getErrorCallback(onerror);
   const promiseForEmail = new Map();
+  const apiRequestQueue = async.queue(
+    async ({ email, sha }) => {
+      const res = await axios.get(`https://api.github.com/repos/${repo}/commits/${sha}`, {
+        headers: {
+          Accept: 'application/vnd.github.v3+json',
+          ...(typeof token === 'string' && { Authorization: `token ${token}` }),
+        },
+      })
+      // .then((res) => { console.log(email); return res; })
+        .catch((error) => errorCallback(sha, email, error));
+      return res;
+    },
+    concurrency,
+  );
+  const setApiPromiseQueue = async.queue(async ({ email, sha }) => {
+    if (!promiseForEmail.has(email)) {
+      promiseForEmail.set(email, apiRequestQueue.push({ email, sha }));
+    }
+  });
   return {
-    setApiPromiseQueue: async.queue(async ({
-      email, sha,
-    }) => {
-      if (!promiseForEmail.has(email)) {
-        promiseForEmail.set(email, axios.get(`https://api.github.com/repos/${repo}/commits/${sha}`, {
-          headers: {
-            Accept: 'application/vnd.github.v3+json',
-            ...(typeof token === 'string' && { Authorization: `token ${token}` }),
-          },
-        }).catch((error) => errorCallback(sha, email, error)));
-      }
-    }),
     promiseForEmail,
+    queue: setApiPromiseQueue,
   };
 }
 
@@ -93,12 +106,11 @@ function createSetApiPromiseQueue(configs) {
  * @param {any} [error] - The error.
  */
 
-async function getAuthorsWithSetApiPromiseQueue(configs, setApiPromiseQueue, promiseForEmail) {
+async function getAuthorsWithQueue(configs, queue, promiseForEmail) {
   const {
     filePath,
     cache = new Map(),
     follow = true,
-    concurrency = 64,
     onerror,
     git = 'git',
   } = configs;
@@ -109,7 +121,7 @@ async function getAuthorsWithSetApiPromiseQueue(configs, setApiPromiseQueue, pro
     cwd: fileStat.isDirectory() ? absPath : path.dirname(absPath),
   });
   const authors = new Set();
-  const queue = async.queue(async (line) => {
+  await Promise.all(stdout.split('\n').map(async (line) => {
     const parts = line.split(' ');
     if (parts.length !== 2) return;
     const [sha, email] = parts;
@@ -117,7 +129,7 @@ async function getAuthorsWithSetApiPromiseQueue(configs, setApiPromiseQueue, pro
       authors.add(cache.get(email));
       return;
     }
-    await setApiPromiseQueue.push({ email, sha });
+    await queue.push({ email, sha });
     const response = await promiseForEmail.get(email);
     if (!response) return;
     const login = response.data?.author?.login;
@@ -125,8 +137,7 @@ async function getAuthorsWithSetApiPromiseQueue(configs, setApiPromiseQueue, pro
       cache.set(email, login);
       authors.add(login);
     } else errorCallback(sha, email, '.author.login not found in the API response');
-  }, concurrency);
-  await Promise.all(stdout.split('\n').map((line) => queue.push(line)));
+  }));
   return Array.from(authors);
 }
 
@@ -143,17 +154,17 @@ async function getAuthorsWithSetApiPromiseQueue(configs, setApiPromiseQueue, pro
  * @param {boolean=} [configs.follow=true] - Whether to use the "--follow" option of "git log" or
  * not. i.e. Continue listing the history of a file beyond renames.
  * WARNING: In order to make this option work, the [filePath] should be a file, not a directory.
- * @param {number=} [configs.concurrency=64] - Maximum number of tasks at the same time.
+ * @param {number=} [configs.concurrency=64] - Maximum number of API requests at the same time.
  * @param {OnErrorCallback=} [configs.onerror=console.error(...)]
  * The callback function when error happens.
  * @param {string=} [configs.git='git'] - The command (path to the binary file) for Git.
  * @returns {Promise<string[]>} The authors of the file.
  * @async
- * @date 2021-02-13
+ * @date 2021-02-14
  */
 async function getAuthors(configs) {
-  const { setApiPromiseQueue, promiseForEmail } = createSetApiPromiseQueue(configs);
-  return getAuthorsWithSetApiPromiseQueue(configs, setApiPromiseQueue, promiseForEmail);
+  const { queue, promiseForEmail } = createQueue(configs);
+  return getAuthorsWithQueue(configs, queue, promiseForEmail);
 }
 
 /**
@@ -168,22 +179,22 @@ async function getAuthors(configs) {
  * not. i.e. Continue listing the history of a file beyond renames.
  * WARNING: In order to make this option work, you need to list ALL files in [paths], not only the
  * directories containing the files.
- * @param {number=} [configs.concurrency=64] - Maximum number of tasks at the same time.
+ * @param {number=} [configs.concurrency=64] - Maximum number of API requests at the same time.
  * @param {OnErrorCallback=} [configs.onerror=console.error(...)]
  * The callback function when error happens.
  * @param {string=} [configs.git='git'] - The command (path to the binary file) for Git.
  * @returns {Promise<Map<string, string>>} The cache prepared for the given paths.
  * @async
- * @date 2021-02-13
+ * @date 2021-02-14
  */
 async function cacheFor(configs) {
   const { paths = [] } = configs;
   assert(Array.isArray(paths));
-  const { setApiPromiseQueue, promiseForEmail } = createSetApiPromiseQueue(configs);
+  const { queue, promiseForEmail } = createQueue(configs);
   const cache = new Map();
-  await Promise.all(paths.map((filePath) => getAuthorsWithSetApiPromiseQueue(
+  await Promise.all(paths.map((filePath) => getAuthorsWithQueue(
     { ...configs, filePath, cache },
-    setApiPromiseQueue,
+    queue,
     promiseForEmail,
   )));
   return cache;
