@@ -20,6 +20,7 @@ const exec = promisify(require('child_process').exec);
 const assert = require('assert').strict;
 const path = require('path');
 const fs = require('fs').promises;
+const async = require('async');
 const axios = require('axios').default;
 
 /**
@@ -72,6 +73,7 @@ function checkRepo(repo) {
  * @param {boolean=} [configs.follow=true] - Whether to use the "--follow" option of "git log" or
  * not. i.e. Continue listing the history of a file beyond renames.
  * WARNING: In order to make this option work, the [filePath] should be a file, not a directory.
+ * @param {number=} [configs.concurrency=64] - Maximum number of tasks at the same time.
  * @param {OnErrorCallback=} [configs.onerror=console.error(...)]
  * The callback function when error happens.
  * @param {string=} [configs.git='git'] - The command (path to the binary file) for Git.
@@ -85,6 +87,7 @@ async function getAuthors({
   token = process.env.GITHUB_TOKEN,
   cache = new Map(),
   follow = true,
+  concurrency = 64,
   // eslint-disable-next-line no-console
   onerror = (sha, email, error) => console.error(`Failed to get the author of ${sha} with the email <${email}>: ${error}`),
   git = 'git',
@@ -98,7 +101,7 @@ async function getAuthors({
   });
   const authors = new Set();
   const promiseForEmail = new Map();
-  await Promise.all(stdout.split('\n').map(async (line) => {
+  const queue = async.queue(async (line) => {
     const parts = line.split(' ');
     if (parts.length !== 2) return;
     const [sha, email] = parts;
@@ -121,7 +124,8 @@ async function getAuthors({
       cache.set(email, login);
       authors.add(login);
     } else errorCallback(sha, email, '.author.login not found in the API response');
-  }));
+  }, concurrency);
+  await Promise.all(stdout.split('\n').map((line) => queue.push(line)));
   return Array.from(authors);
 }
 
@@ -149,6 +153,7 @@ async function cacheFor({
   paths = [],
   token = process.env.GITHUB_TOKEN,
   follow = true,
+  concurrency = 64,
   // eslint-disable-next-line no-console
   onerror = (sha, email, error) => console.error(`Failed to get the author of ${sha} with the email <${email}>: ${error}`),
   git = 'git',
@@ -157,7 +162,7 @@ async function cacheFor({
   assert(Array.isArray(paths));
   const cache = new Map();
   await Promise.all(paths.map((filePath) => getAuthors({
-    repo, filePath, token, cache, follow, onerror, git,
+    repo, filePath, token, cache, follow, concurrency, onerror, git,
   })));
   return cache;
 }
