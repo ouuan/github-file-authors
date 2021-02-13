@@ -10,3 +10,5 @@ Get GitHub usernames of the authors to each file based on the commit logs.
 
 -   Still works after file renaming.
 -   Can use cache to reduce GitHub API requests.
+-   One email, one request. There's no redundant API request.
+-   Able to set async concurrency.

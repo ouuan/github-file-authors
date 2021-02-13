@@ -79,7 +79,7 @@ function createQueue(configs) {
   const promiseForEmail = new Map();
   const apiRequestQueue = async.queue(
     async ({ email, sha }) => {
-      const res = await axios.get(`https://api.github.com/repos/${repo}/commits/${sha}`, {
+      const response = await axios.get(`https://api.github.com/repos/${repo}/commits/${sha}`, {
         headers: {
           Accept: 'application/vnd.github.v3+json',
           ...(typeof token === 'string' && { Authorization: `token ${token}` }),
@@ -87,7 +87,10 @@ function createQueue(configs) {
       })
       // .then((res) => { console.log(email); return res; })
         .catch((error) => errorCallback(sha, email, error));
-      return res;
+      if (!response) return null;
+      const login = response.data?.author?.login;
+      if (typeof login !== 'string') errorCallback(sha, email, '.author.login not found in the API response');
+      return login;
     },
     apiConcurrency,
   );
@@ -95,6 +98,7 @@ function createQueue(configs) {
     if (!promiseForEmail.has(email)) {
       promiseForEmail.set(email, apiRequestQueue.push({ email, sha }));
     }
+    return promiseForEmail.get(email);
   });
   const gitQueue = async.queue(async (filePath) => {
     const absPath = path.resolve(filePath);
@@ -106,20 +110,17 @@ function createQueue(configs) {
   }, gitConcurrency);
   return {
     gitQueue,
-    promiseForEmail,
     setApiPromiseQueue,
   };
 }
 
 async function getAuthorsWithQueue({
-  configs, setApiPromiseQueue, promiseForEmail, gitQueue,
+  configs, setApiPromiseQueue, gitQueue,
 }) {
   const {
     filePath,
     cache = new Map(),
-    onerror,
   } = configs;
-  const errorCallback = getErrorCallback(onerror);
   const stdout = await gitQueue.push(filePath);
   const authors = new Set();
   await Promise.all(stdout.split('\n').map(async (line) => {
@@ -130,14 +131,11 @@ async function getAuthorsWithQueue({
       authors.add(cache.get(email));
       return;
     }
-    await setApiPromiseQueue.push({ email, sha });
-    const response = await promiseForEmail.get(email);
-    if (!response) return;
-    const login = response.data?.author?.login;
+    const login = await (await setApiPromiseQueue.push({ email, sha }));
     if (typeof login === 'string') {
       cache.set(email, login);
       authors.add(login);
-    } else errorCallback(sha, email, '.author.login not found in the API response');
+    }
   }));
   return Array.from(authors);
 }
