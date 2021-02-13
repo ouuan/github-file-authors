@@ -1,6 +1,7 @@
 ## Unreleased
 
 -   Add the concurrency parameter.
+-   Now the result array of getAuthors is sorted.
 -   Improve the algorithm to reduce redundant API requests for cacheFor.
 
 ## v0.1.3

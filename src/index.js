@@ -164,7 +164,8 @@ async function getAuthorsWithQueue(configs, queue, promiseForEmail) {
  */
 async function getAuthors(configs) {
   const { queue, promiseForEmail } = createQueue(configs);
-  return getAuthorsWithQueue(configs, queue, promiseForEmail);
+  const authors = await getAuthorsWithQueue(configs, queue, promiseForEmail);
+  return authors.sort();
 }
 
 /**
