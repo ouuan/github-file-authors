@@ -67,7 +67,8 @@ function checkRepo(repo) {
  * It's a normal file path (either absolute or relative to pwd), NOT relative to the repository.
  * @param {string|null=} [configs.token=process.env.GITHUB_TOKEN] - A GitHub Personal Access Token,
  * or null if you don't want to use tokens.
- * @param {Map<string, string>=} [configs.cache=newMap()] - The cache.
+ * @param {Map<string, string>=} [configs.cache=newMap()] - The cache. The emails of the authors of
+ * ${filePath} will be added in the cache.
  * @param {boolean=} [configs.follow=true] - Whether to use the "--follow" option of "git log" or
  * not. i.e. Continue listing the history of a file beyond renames.
  * @param {OnErrorCallback=} [configs.onerror=console.error(...)]
