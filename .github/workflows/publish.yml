@@ -13,7 +13,10 @@ jobs:
       - uses: actions/setup-node@v1
         with:
           node-version: 14
+      - run: git submodule update --init
       - run: yarn
+      - run: yarn lint
+      - run: yarn test
       - uses: JS-DevTools/npm-publish@v1
         with:
           token: ${{ secrets.NPM_TOKEN }}
