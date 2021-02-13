@@ -5,3 +5,8 @@
 Get GitHub usernames of the authors to each file based on the commit logs.
 
 [Documentation](https://ouuan.github.io/github-file-authors/)
+
+## Features
+
+-   Still works after file renaming.
+-   Can use cache to reduce GitHub API requests.
