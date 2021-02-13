@@ -91,9 +91,10 @@ async function getAuthors({
 }) {
   checkRepo(repo);
   const errorCallback = typeof onerror === 'function' ? onerror : () => {};
-  const fileStat = await fs.lstat(filePath);
-  const { stdout } = await exec(`${git} log ${follow ? '--follow' : '--no-follow'} --pretty='%H %aE' ${filePath}`, {
-    cwd: fileStat.isDirectory() ? filePath : path.dirname(filePath),
+  const absPath = path.resolve(filePath);
+  const fileStat = await fs.lstat(absPath);
+  const { stdout } = await exec(`${git} log ${follow ? '--follow' : '--no-follow'} --pretty='%H %aE' ${absPath}`, {
+    cwd: fileStat.isDirectory() ? absPath : path.dirname(absPath),
   });
   const authors = new Set();
   const promiseForEmail = new Map();

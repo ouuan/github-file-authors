@@ -79,4 +79,8 @@ describe('getAuthor', () => {
     const writtenAndReadCache = await readCache(cachePath);
     assert.deepEqual(writtenAndReadCache, cache);
   });
+  it('Relative path', async () => {
+    const authors = await getAuthors({ repo, filePath: path.relative(process.cwd(), p('test', 'test1')), token });
+    assert.deepEqual(authors.sort(), ['ouuan', 'sshwy']);
+  });
 });

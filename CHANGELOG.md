@@ -1,5 +1,8 @@
 ## Unreleased
 
+-   Fix an error that happens when the arguments are relative paths.
+-   Improved the docs.
+
 ## v0.1.2
 
 -   Fix typos
