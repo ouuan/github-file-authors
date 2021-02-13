@@ -68,7 +68,10 @@ function createQueue(configs) {
   const {
     repo,
     token = process.env.GITHUB_TOKEN,
-    concurrency = 64,
+    apiConcurrency = 64,
+    gitConcurrency = 64,
+    git = 'git',
+    follow = true,
     onerror,
   } = configs;
   checkRepo(repo);
@@ -86,40 +89,38 @@ function createQueue(configs) {
         .catch((error) => errorCallback(sha, email, error));
       return res;
     },
-    concurrency,
+    apiConcurrency,
   );
   const setApiPromiseQueue = async.queue(async ({ email, sha }) => {
     if (!promiseForEmail.has(email)) {
       promiseForEmail.set(email, apiRequestQueue.push({ email, sha }));
     }
   });
+  const gitQueue = async.queue(async (filePath) => {
+    const absPath = path.resolve(filePath);
+    const cwd = (await fs.lstat(absPath)).isDirectory() ? absPath : path.dirname(absPath);
+    const { stdout } = await exec(`${git} log ${follow ? '--follow' : '--no-follow'} --pretty='%H %aE' ${absPath}`, {
+      cwd,
+    });
+    return stdout;
+  }, gitConcurrency);
   return {
+    gitQueue,
     promiseForEmail,
-    queue: setApiPromiseQueue,
+    setApiPromiseQueue,
   };
 }
 
-/**
- * @callback OnErrorCallback
- * @param {string} [sha] - The sha of the commit which caused the error.
- * @param {string} [email] - The email of the author to the commit which caused the error.
- * @param {any} [error] - The error.
- */
-
-async function getAuthorsWithQueue(configs, queue, promiseForEmail) {
+async function getAuthorsWithQueue({
+  configs, setApiPromiseQueue, promiseForEmail, gitQueue,
+}) {
   const {
     filePath,
     cache = new Map(),
-    follow = true,
     onerror,
-    git = 'git',
   } = configs;
   const errorCallback = getErrorCallback(onerror);
-  const absPath = path.resolve(filePath);
-  const fileStat = await fs.lstat(absPath);
-  const { stdout } = await exec(`${git} log ${follow ? '--follow' : '--no-follow'} --pretty='%H %aE' ${absPath}`, {
-    cwd: fileStat.isDirectory() ? absPath : path.dirname(absPath),
-  });
+  const stdout = await gitQueue.push(filePath);
   const authors = new Set();
   await Promise.all(stdout.split('\n').map(async (line) => {
     const parts = line.split(' ');
@@ -129,7 +130,7 @@ async function getAuthorsWithQueue(configs, queue, promiseForEmail) {
       authors.add(cache.get(email));
       return;
     }
-    await queue.push({ email, sha });
+    await setApiPromiseQueue.push({ email, sha });
     const response = await promiseForEmail.get(email);
     if (!response) return;
     const login = response.data?.author?.login;
@@ -140,6 +141,13 @@ async function getAuthorsWithQueue(configs, queue, promiseForEmail) {
   }));
   return Array.from(authors);
 }
+
+/**
+ * @callback OnErrorCallback
+ * @param {string} [sha] - The sha of the commit which caused the error.
+ * @param {string} [email] - The email of the author to the commit which caused the error.
+ * @param {any} [error] - The error.
+ */
 
 /**
  * Get the authors of a specific path in the given GitHub repository.
@@ -154,7 +162,8 @@ async function getAuthorsWithQueue(configs, queue, promiseForEmail) {
  * @param {boolean=} [configs.follow=true] - Whether to use the "--follow" option of "git log" or
  * not. i.e. Continue listing the history of a file beyond renames.
  * WARNING: In order to make this option work, the [filePath] should be a file, not a directory.
- * @param {number=} [configs.concurrency=64] - Maximum number of API requests at the same time.
+ * @param {number=} [configs.apiConcurrency=64] - Maximum number of API requests at the same time.
+ * @param {number=} [configs.gitConcurrency=64] - Maximum number of Git processes at the same time.
  * @param {OnErrorCallback=} [configs.onerror=console.error(...)]
  * The callback function when error happens.
  * @param {string=} [configs.git='git'] - The command (path to the binary file) for Git.
@@ -163,8 +172,7 @@ async function getAuthorsWithQueue(configs, queue, promiseForEmail) {
  * @date 2021-02-14
  */
 async function getAuthors(configs) {
-  const { queue, promiseForEmail } = createQueue(configs);
-  const authors = await getAuthorsWithQueue(configs, queue, promiseForEmail);
+  const authors = await getAuthorsWithQueue({ configs, ...createQueue(configs) });
   return authors.sort();
 }
 
@@ -180,7 +188,8 @@ async function getAuthors(configs) {
  * not. i.e. Continue listing the history of a file beyond renames.
  * WARNING: In order to make this option work, you need to list ALL files in [paths], not only the
  * directories containing the files.
- * @param {number=} [configs.concurrency=64] - Maximum number of API requests at the same time.
+ * @param {number=} [configs.apiConcurrency=64] - Maximum number of API requests at the same time.
+ * @param {number=} [configs.gitConcurrency=64] - Maximum number of Git processes at the same time.
  * @param {OnErrorCallback=} [configs.onerror=console.error(...)]
  * The callback function when error happens.
  * @param {string=} [configs.git='git'] - The command (path to the binary file) for Git.
@@ -191,13 +200,12 @@ async function getAuthors(configs) {
 async function cacheFor(configs) {
   const { paths = [] } = configs;
   assert(Array.isArray(paths));
-  const { queue, promiseForEmail } = createQueue(configs);
+  const queues = createQueue(configs);
   const cache = new Map();
-  await Promise.all(paths.map((filePath) => getAuthorsWithQueue(
-    { ...configs, filePath, cache },
-    queue,
-    promiseForEmail,
-  )));
+  await Promise.all(paths.map((filePath) => getAuthorsWithQueue({
+    configs: { ...configs, filePath, cache },
+    ...queues,
+  })));
   return cache;
 }
 

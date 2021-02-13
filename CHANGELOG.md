@@ -1,6 +1,6 @@
 ## Unreleased
 
--   Add the concurrency parameter.
+-   Add apiConcurrency and gitConcurrency parameters.
 -   Now the result array of getAuthors is sorted.
 -   Improve the algorithm to reduce redundant API requests for cacheFor.
 
