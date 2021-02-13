@@ -148,7 +148,7 @@ async function getAuthorsWithQueue({
  * Get the GitHub usernames of the authors to the given paths.
  * @param {Object} configs
  * @param {string} configs.repo - The GitHub repository, in the "owner/name" format.
- * @param {string | string[] =} [configs.paths=[]] - The paths containing the files for which you
+ * @param {string|string[]} [configs.paths=[]] - The paths containing the files for which you
  * want to get the authors.
 * @param {Map<string, string>=} [configs.cache=new Map()] - The cache. The emails of the authors of
  * [filePath] will be added in the cache.
