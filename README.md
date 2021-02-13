@@ -4,4 +4,4 @@
 
 Get GitHub usernames of the authors to each file based on the commit logs.
 
-[Documentation](https://ouuan.github.io/github-file-authors)
+[Documentation](https://ouuan.github.io/github-file-authors/)
