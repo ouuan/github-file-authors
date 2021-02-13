@@ -1,6 +1,7 @@
 ## Unreleased
 
 -   Add the concurrency parameter.
+-   Improve the algorithm to reduce redundant API requests for cacheFor.
 
 ## v0.1.3
 
