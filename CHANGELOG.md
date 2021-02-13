@@ -1,5 +1,7 @@
 ## Unreleased
 
+## v0.1.2
+
 -   Fix typos
 -   Add .npmignore to make this package smaller
 
