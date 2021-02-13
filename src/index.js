@@ -60,17 +60,18 @@ function checkRepo(repo) {
  */
 
 /**
- * Get the authors of a file in a GitHub repository.
+ * Get the authors of a specific path in the given GitHub repository.
  * @param {Object} configs
  * @param {string} configs.repo - The GitHub repository, in the "owner/name" format.
- * @param {string} configs.filePath - The path to the file which you want to know its authors.
+ * @param {string} configs.filePath - The path that you want to know its authors.
  * It's a normal file path (either absolute or relative to pwd), NOT relative to the repository.
  * @param {string|null=} [configs.token=process.env.GITHUB_TOKEN] - A GitHub Personal Access Token,
  * or null if you don't want to use tokens.
  * @param {Map<string, string>=} [configs.cache=new Map()] - The cache. The emails of the authors of
- * ${filePath} will be added in the cache.
+ * [filePath] will be added in the cache.
  * @param {boolean=} [configs.follow=true] - Whether to use the "--follow" option of "git log" or
  * not. i.e. Continue listing the history of a file beyond renames.
+ * WARNING: In order to make this option work, the [filePath] should be a file, not a directory.
  * @param {OnErrorCallback=} [configs.onerror=console.error(...)]
  * The callback function when error happens.
  * @param {string=} [configs.git='git'] - The command (path to the binary file) for Git.
