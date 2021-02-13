@@ -1,0 +1,3 @@
+[submodule "test/github-file-authors-test"]
+	path = test/github-file-authors-test
+	url = https://github.com/ouuan/github-file-authors-test

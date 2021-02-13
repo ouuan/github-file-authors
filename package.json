@@ -1,0 +1,22 @@
+{
+  "name": "github-file-authors",
+  "description": "Get GitHub usernames of the authors to each file based on the commit log.",
+  "version": "0.0.1",
+  "main": "src/index.js",
+  "repository": "https://github.com/ouuan/github-file-authors",
+  "author": "Yufan You <ouuansteve@gmail.com> (https://github.com/ouuan)",
+  "license": "Apache-2.0",
+  "scripts": {
+    "lint": "eslint src test --ext js --fix",
+    "test": "mocha --timeout 10000"
+  },
+  "devDependencies": {
+    "eslint": "^7.20.0",
+    "eslint-config-airbnb-base": "^14.2.1",
+    "eslint-plugin-import": "^2.22.1",
+    "mocha": "^8.3.0"
+  },
+  "dependencies": {
+    "axios": "^0.21.1"
+  }
+}
