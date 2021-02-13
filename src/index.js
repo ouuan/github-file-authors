@@ -69,7 +69,7 @@ function createQueue(configs) {
     repo,
     token = process.env.GITHUB_TOKEN,
     apiConcurrency = 64,
-    gitConcurrency = 64,
+    gitConcurrency = 32,
     git = 'git',
     follow = true,
     onerror,
@@ -115,12 +115,9 @@ function createQueue(configs) {
 }
 
 async function getAuthorsWithQueue({
-  configs, setApiPromiseQueue, gitQueue,
+  configs, filePath, setApiPromiseQueue, gitQueue,
 }) {
-  const {
-    filePath,
-    cache = new Map(),
-  } = configs;
+  const { cache = new Map() } = configs;
   const stdout = await gitQueue.push(filePath);
   const authors = new Set();
   await Promise.all(stdout.split('\n').map(async (line) => {
@@ -137,7 +134,7 @@ async function getAuthorsWithQueue({
       authors.add(login);
     }
   }));
-  return Array.from(authors);
+  return Array.from(authors).sort();
 }
 
 /**
@@ -148,38 +145,13 @@ async function getAuthorsWithQueue({
  */
 
 /**
- * Get the authors of a specific path in the given GitHub repository.
+ * Get the GitHub usernames of the authors to the given paths.
  * @param {Object} configs
  * @param {string} configs.repo - The GitHub repository, in the "owner/name" format.
- * @param {string} configs.filePath - The path that you want to know its authors.
- * It's a normal file path (either absolute or relative to pwd), NOT relative to the repository.
- * @param {string|null=} [configs.token=process.env.GITHUB_TOKEN] - A GitHub Personal Access Token,
- * or null if you don't want to use tokens.
- * @param {Map<string, string>=} [configs.cache=new Map()] - The cache. The emails of the authors of
+ * @param {string | string[] =} [configs.paths=[]] - The paths containing the files for which you
+ * want to get the authors.
+* @param {Map<string, string>=} [configs.cache=new Map()] - The cache. The emails of the authors of
  * [filePath] will be added in the cache.
- * @param {boolean=} [configs.follow=true] - Whether to use the "--follow" option of "git log" or
- * not. i.e. Continue listing the history of a file beyond renames.
- * WARNING: In order to make this option work, the [filePath] should be a file, not a directory.
- * @param {number=} [configs.apiConcurrency=64] - Maximum number of API requests at the same time.
- * @param {number=} [configs.gitConcurrency=64] - Maximum number of Git processes at the same time.
- * @param {OnErrorCallback=} [configs.onerror=console.error(...)]
- * The callback function when error happens.
- * @param {string=} [configs.git='git'] - The command (path to the binary file) for Git.
- * @returns {Promise<string[]>} The authors of the file.
- * @async
- * @date 2021-02-14
- */
-async function getAuthors(configs) {
-  const authors = await getAuthorsWithQueue({ configs, ...createQueue(configs) });
-  return authors.sort();
-}
-
-/**
- * Get the cache prepared for the files in the given paths and their subdirectories.
- * @param {Object} configs
- * @param {string} configs.repo - The GitHub repository, in the "owner/name" format.
- * @param {(string[])=} [configs.paths=[]] - The paths containing the files for which you want to
- * get the cache.
  * @param {string|null=} [configs.token=process.env.GITHUB_TOKEN] - A GitHub Personal Access Token,
  * or null if you don't want to use tokens.
  * @param {boolean=} [configs.follow=true] - Whether to use the "--follow" option of "git log" or
@@ -187,29 +159,36 @@ async function getAuthors(configs) {
  * WARNING: In order to make this option work, you need to list ALL files in [paths], not only the
  * directories containing the files.
  * @param {number=} [configs.apiConcurrency=64] - Maximum number of API requests at the same time.
- * @param {number=} [configs.gitConcurrency=64] - Maximum number of Git processes at the same time.
+ * @param {number=} [configs.gitConcurrency=32] - Maximum number of Git processes at the same time.
  * @param {OnErrorCallback=} [configs.onerror=console.error(...)]
  * The callback function when error happens.
  * @param {string=} [configs.git='git'] - The command (path to the binary file) for Git.
- * @returns {Promise<Map<string, string>>} The cache prepared for the given paths.
+ * @returns {Promise<string[][]>} An array of the authors to each file.
  * @async
  * @date 2021-02-14
  */
-async function cacheFor(configs) {
-  const { paths = [] } = configs;
-  assert(Array.isArray(paths));
+async function getAuthors(configs) {
+  const paths = [].concat(configs.paths);
   const queues = createQueue(configs);
-  const cache = new Map();
-  await Promise.all(paths.map((filePath) => getAuthorsWithQueue({
-    configs: { ...configs, filePath, cache },
+  return Promise.all(paths.map((filePath) => getAuthorsWithQueue({
+    configs,
+    filePath,
     ...queues,
   })));
-  return cache;
+}
+
+/**
+ * Get an empty cache
+ * @returns {Map<string, string>} An empty cache
+ * @date 2021-02-14
+ */
+function newCache() {
+  return new Map();
 }
 
 module.exports = {
   readCache,
   writeCache,
   getAuthors,
-  cacheFor,
+  newCache,
 };

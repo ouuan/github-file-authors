@@ -1,7 +1,8 @@
 ## Unreleased
 
+-   cacheFor is removed.
+-   getAuthors receives paths as parameter, and returns a 2-d array.
 -   Add apiConcurrency and gitConcurrency parameters.
--   Now the result array of getAuthors is sorted.
 -   Improve the algorithm to reduce redundant API requests for cacheFor.
 
 ## v0.1.3
