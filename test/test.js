@@ -12,6 +12,7 @@ const realCache = {
   ouuan: ['ouuansteve@gmail.com', 'ouuan'],
   sshwy: ['jy.cat@qq.com', 'sshwy'],
   mgt: ['mgt@oi-wiki.org', 'Enter-tainer'],
+  qwq: ['2333333333333333333333+qwq@users.noreply.github.com', 'qwq'],
 };
 
 const fakeCache = {
@@ -89,15 +90,23 @@ describe('getAuthor', () => {
     const authors = await getAuthors({ repo, paths: path.relative(process.cwd(), p('test', 'test1')), token });
     assert.deepEqual(authors, [['ouuan', 'sshwy']]);
   });
-  it('On error', async () => {
+  it('Check users.noreply.github.com', async () => {
+    const authors = await getAuthors({
+      repo, paths: p('test', 'users.noreply.github.com'), token, follow: false,
+    });
+    assert.deepEqual(authors, [['qwq']]);
+  });
+  it('Don\'t check users.noreply.github.com', async () => {
     let called = false;
     await getAuthors({
       repo,
-      paths: [p()],
+      paths: p('test', 'users.noreply.github.com'),
+      token,
+      usersNoreply: false,
       onerror: (sha, email, error) => {
         called = true;
-        assert.equal(sha, '8ab92719f812b4761fc9758cbe520fe9824da1cf');
-        assert.equal(email, 'this-user@doesnt-exist.com');
+        assert.equal(sha, '401283999de6878de1ed79be20a932849cf40f40');
+        assert.equal(email, '2333333333333333333333+qwq@users.noreply.github.com');
         assert.equal(error.toString(), '.author.login not found in the API response');
       },
     });

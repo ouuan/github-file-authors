@@ -117,7 +117,7 @@ function createQueue(configs) {
 async function getAuthorsWithQueue({
   configs, filePath, setApiPromiseQueue, gitQueue,
 }) {
-  const { cache = new Map() } = configs;
+  const { cache = new Map(), usersNoreply = true } = configs;
   const stdout = await gitQueue.push(filePath);
   const authors = new Set();
   await Promise.all(stdout.split('\n').map(async (line) => {
@@ -128,7 +128,9 @@ async function getAuthorsWithQueue({
       authors.add(cache.get(email));
       return;
     }
-    const login = await (await setApiPromiseQueue.push({ email, sha }));
+    const noreplyMatch = usersNoreply ? email.match(/^\d+\+([A-Za-z0-9_.-]+)@users.noreply.github.com$/) : null;
+    const login = noreplyMatch ? noreplyMatch[1]
+      : await (await setApiPromiseQueue.push({ email, sha }));
     if (typeof login === 'string') {
       cache.set(email, login);
       authors.add(login);
@@ -158,6 +160,8 @@ async function getAuthorsWithQueue({
  * not. i.e. Continue listing the history of a file beyond renames.
  * WARNING: In order to make this option work, you need to list ALL files in [paths], not only the
  * directories containing the files.
+ * @param {boolean=} [configs.usersNoreply=true] - Use the regular expression to get the username
+ * for /^\d+\+([A-Za-z0-9_.-]+)@users.noreply.github.com$/.
  * @param {number=} [configs.apiConcurrency=64] - Maximum number of API requests at the same time.
  * @param {number=} [configs.gitConcurrency=32] - Maximum number of Git processes at the same time.
  * @param {OnErrorCallback=} [configs.onerror=console.error(...)]

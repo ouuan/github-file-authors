@@ -1,5 +1,7 @@
 ## Unreleased
 
+-   Support checking users.noreply.github.com by regex.
+
 ## v1.0.0
 
 -   cacheFor is removed.
