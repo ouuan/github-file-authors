@@ -153,7 +153,7 @@ async function getAuthorsWithQueue({
  * @param {string|string[]} [configs.paths=[]] - The paths containing the files for which you
  * want to get the authors.
 * @param {Map<string, string>=} [configs.cache=new Map()] - The cache. The emails of the authors of
- * [filePath] will be added in the cache.
+ * [paths] will be added in the cache.
  * @param {string|null=} [configs.token=process.env.GITHUB_TOKEN] - A GitHub Personal Access Token,
  * or null if you don't want to use tokens.
  * @param {boolean=} [configs.follow=true] - Whether to use the "--follow" option of "git log" or
