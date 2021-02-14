@@ -1,7 +1,7 @@
 {
   "name": "github-file-authors",
   "description": "Get GitHub usernames of the authors to each file based on the commit log.",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "main": "src/index.js",
   "repository": "https://github.com/ouuan/github-file-authors",
   "author": "Yufan You <ouuansteve@gmail.com> (https://github.com/ouuan)",

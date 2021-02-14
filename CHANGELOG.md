@@ -1,5 +1,7 @@
 ## Unreleased
 
+## v1.1.0
+
 -   Support checking users.noreply.github.com by regex.
 
 ## v1.0.0
