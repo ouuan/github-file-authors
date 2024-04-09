@@ -1,5 +1,9 @@
 ## Unreleased
 
+## v1.1.1
+
+-   Bump dependencies.
+
 ## v1.1.0
 
 -   Support checking users.noreply.github.com by regex.
