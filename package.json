@@ -12,15 +12,15 @@
     "doc": "jsdoc src -t node_modules/docdash -R README.md"
   },
   "devDependencies": {
-    "docdash": "^1.2.0",
+    "docdash": "^2.0.2",
     "eslint": "^7.20.0",
     "eslint-config-airbnb-base": "^14.2.1",
-    "eslint-plugin-import": "^2.22.1",
-    "jsdoc": "^3.6.6",
-    "mocha": "^8.3.0"
+    "eslint-plugin-import": "^2.29.1",
+    "jsdoc": "^4.0.2",
+    "mocha": "^10.4.0"
   },
   "dependencies": {
-    "async": "^3.2.0",
-    "axios": "^0.21.1"
+    "async": "^3.2.5",
+    "axios": "^1.6.8"
   }
 }
